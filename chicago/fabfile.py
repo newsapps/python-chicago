@@ -1,6 +1,8 @@
 import json
 import requests
-import shapely
+
+from csv import DictWriter
+from shapely.geometry import shape, Point
 
 
 def download_precincts(
@@ -44,7 +46,34 @@ def generate_precinct_tract_crosswalk(
         precincts = json.loads(fh.read())
     with open(tracts_path) as fh:
         tracts = json.loads(fh.read())
-    print 'precincts', precincts['features'][0]['properties']
-    print 'tracts', tracts['features'][0]['properties']
-    print len(precincts['features']), 'precincts'
-    print len(tracts['features']), 'tracts'
+
+    # Create iterable of shapely geometries of tracts, since there are fewer & they're bigger
+    tract_geos = []
+    for tract in tracts['features']:
+        tract_geos.append({
+            'geoid10': tract['properties']['geoid10'],
+            'shape': shape(tract['geometry'])
+        })
+
+    # Now, loop over precincts, take the centroid of each and find the tract that centroid is in
+    crosswalk = []
+    for precinct in precincts['features']:
+        centroid = shape(precinct['geometry']).centroid
+        cw = {
+            'precinct_number': precinct['properties']['precinct'],
+            'precinct_ward': precinct['properties']['ward'],
+            'precinct_full_name': precinct['properties']['full_text'],
+            'tract_geoid': None
+        }
+        for tract in tract_geos:
+            if tract['shape'].contains(centroid):
+                cw['tract_geoid'] = tract['geoid10']
+                break
+        if not cw['tract_geoid']:
+            print 'No tract matches precinct %s' % cw['precinct_full_name']
+        crosswalk.append(cw)
+
+    with open('data/precinct_census_tract_crosswalk.csv', 'w+') as fh:
+        writer = DictWriter(fh, sorted(crosswalk[0].keys()))
+        writer.writeheader()
+        writer.writerows(crosswalk)
