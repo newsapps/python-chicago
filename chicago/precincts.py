@@ -16,7 +16,7 @@ class Precinct(Model):
         return self.full_name
 
     def __repr__(self):
-        return "Precinct(ward='{p.ward}', number='{p.number}')".format(
+        return "Precinct(ward='{p.ward}', number='{p.number}', full_name='{p.full_name}', census_tract_geoid='{p.census_tract_geoid}')".format(
             p=self)
 
 
