@@ -40,8 +40,7 @@ class PrecinctCollection(Collection):
         }
 
     def get_by_full_name(self, full_name):
-        full_name_s = str(full_name)
-        return self._by_full_name[full_name]
+        return self._by_full_name[str(full_name)]
 
     def default_sort(self):
         self._items = sorted(self._items, key=lambda p: int(p.full_name))
@@ -49,3 +48,11 @@ class PrecinctCollection(Collection):
 
 
 PRECINCTS = PrecinctCollection().from_csv(PRECINCT_CSV_FILENAME)
+
+
+def get_precincts_from_tract_geoid(geoid):
+    matching_precincts = []
+    for precinct in PRECINCTS:
+        if precinct.census_tract_geoid == str(geoid):
+            matching_precincts.append(precinct)
+    return matching_precincts

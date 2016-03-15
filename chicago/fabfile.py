@@ -23,7 +23,7 @@ def download_precincts(
 
 def download_tracts(
         url='https://data.cityofchicago.org/api/geospatial/5jrd-6zik?method=export&format=GeoJSON',
-        tracts_as_of='2010'):
+        tracts_as_of=2010):
     """
     Download census tract GeoJSON from url. Set tracts_as_of flag to indicate vintage of tract data.
     """
@@ -51,7 +51,11 @@ def generate_precinct_tract_crosswalk(
     tract_geos = []
     for tract in tracts['features']:
         tract_geos.append({
-            'geoid10': tract['properties']['geoid10'],
+            'geoid10': tract['properties'].get('geoid10', ''),
+            'name10': tract['properties'].get('name10', ''),
+            'countyfp10': tract['properties'].get('countyfp10', ''),
+            'commarea_num': tract['properties'].get('commarea_n', ''),
+            'statefp10': tract['properties'].get('statefp10', ''),
             'shape': shape(tract['geometry'])
         })
 
@@ -63,11 +67,19 @@ def generate_precinct_tract_crosswalk(
             'precinct_number': precinct['properties']['precinct'],
             'precinct_ward': precinct['properties']['ward'],
             'precinct_full_name': precinct['properties']['full_text'],
-            'tract_geoid': None
+            'tract_geoid': None,
+            'tract_name': None,
+            'tract_countyfp': None,
+            'tract_commarea_num': None,
+            'tract_statefp': None
         }
         for tract in tract_geos:
             if tract['shape'].contains(centroid):
                 cw['tract_geoid'] = tract['geoid10']
+                cw['tract_name'] = tract['name10']
+                cw['tract_countyfp'] = tract['countyfp10']
+                cw['tract_commarea_num'] = tract['commarea_num']
+                cw['tract_statefp'] = tract['statefp10']
                 break
         if not cw['tract_geoid']:
             print 'No tract matches precinct %s' % cw['precinct_full_name']
