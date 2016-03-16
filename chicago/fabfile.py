@@ -7,6 +7,8 @@ from shapely.geometry import shape, Point
 from StringIO import StringIO
 from zipfile import ZipFile
 
+from illinois.counties import COUNTIES
+
 
 def download_all_tracts_for_county(
         url='http://www2.census.gov/geo/tiger/TIGER2015/TRACT/tl_2015_17_tract.zip',
@@ -17,11 +19,27 @@ def download_all_tracts_for_county(
     tracts.
     """
     response = requests.get(url)
+    county_info = COUNTIES.get_by_name(county)
     with open('/tmp/il_counties.zip', 'w+') as fh:
         fh.write(response.content)
     with fiona.open('/tl_2015_17_tract.shp', vfs='zip:///tmp/il_counties.zip') as shp:
+        tract_geojson = {
+            'type': 'FeatureCollection',
+            'features': []
+        }
+        tract_csv = []
         for row in shp:
-            print shape(row['geometry']).centroid, row['properties']
+            if row['properties']['COUNTYFP'] == county_info.countyfp:
+                tract_geojson['features'].append(row)
+                tract_csv.append(row['properties'])
+        with open('data/%s_county_all_tracts_as_of_%s.geojson' % (
+                county.lower(), tracts_as_of), 'w+') as fh:
+            fh.write(json.dumps(tract_geojson))
+        with open('data/%s_county_all_tracts_as_of_%s.csv' % (
+                county.lower(), tracts_as_of), 'w+') as fh:
+            writer = DictWriter(fh, sorted(tract_csv[0].keys()))
+            writer.writeheader()
+            writer.writerows(tract_csv)
 
 
 def download_county_fips_codes(
@@ -100,11 +118,11 @@ def download_tracts(
         fh.write(json.dumps(data))
 
 
-def generate_precinct_tract_crosswalk(
+def generate_chicago_precinct_tract_crosswalk(
         precincts_path='data/precincts_as_of_2012.geojson',
         tracts_path='data/census_tracts_as_of_2010.geojson'):
     """
-    Generate crosswalk of precincts<->census tracts.
+    Generate crosswalk of precincts<->census tracts for Chicago.
     """
     with open(precincts_path) as fh:
         precincts = json.loads(fh.read())
@@ -149,7 +167,50 @@ def generate_precinct_tract_crosswalk(
             print 'No tract matches precinct %s' % cw['precinct_full_name']
         crosswalk.append(cw)
 
-    with open('data/precinct_census_tract_crosswalk.csv', 'w+') as fh:
+    with open('data/chicago_precinct_census_tract_crosswalk.csv', 'w+') as fh:
+        writer = DictWriter(fh, sorted(crosswalk[0].keys()))
+        writer.writeheader()
+        writer.writerows(crosswalk)
+
+
+# HACK - this violates DRY, should be refactored and combined/generalized with
+# generate_chicago_precinct_tract_crosswalk
+def generate_suburban_cook_precinct_tract_crosswalk(
+        precincts_path='data/cook_suburban_precincts_as_of_2016.geojson',
+        tracts_path='data/cook_county_all_tracts_as_of_2015.geojson'):
+    """
+    Generate crosswalk of precincts<->census tracts for suburban Cook County.
+    """
+    with open(precincts_path) as fh:
+        precincts = json.loads(fh.read())
+    with open(tracts_path) as fh:
+        tracts = json.loads(fh.read())
+
+    # Create iterable of shapely geometries of tracts, since there are fewer & they're bigger
+    tract_geos = []
+    for tract in tracts['features']:
+        tract_geos.append({
+            'geoid': tract['properties'].get('GEOID', ''),
+            'shape': shape(tract['geometry'])
+        })
+
+    # Now, loop over precincts, take the centroid of each and find the tract that centroid is in
+    crosswalk = []
+    for precinct in precincts['features']:
+        centroid = shape(precinct['geometry']).centroid
+        cw = {
+            'precinct_number': precinct['properties']['idpct'],
+            'tract_geoid': None
+        }
+        for tract in tract_geos:
+            if tract['shape'].contains(centroid):
+                cw['tract_geoid'] = tract['geoid']
+                break
+        if not cw['tract_geoid']:
+            print 'No tract matches precinct %s' % cw['precinct_number']
+        crosswalk.append(cw)
+
+    with open('data/suburban_cook_precinct_census_tract_crosswalk.csv', 'w+') as fh:
         writer = DictWriter(fh, sorted(crosswalk[0].keys()))
         writer.writeheader()
         writer.writerows(crosswalk)

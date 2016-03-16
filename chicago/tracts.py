@@ -2,7 +2,7 @@ import os.path
 
 from .base import Model, Collection, DATA_DIRECTORY
 
-TRACT_CSV_FILENAME = os.path.join(DATA_DIRECTORY, 'precinct_census_tract_crosswalk.csv')
+TRACT_CSV_FILENAME = os.path.join(DATA_DIRECTORY, 'chicago_precinct_census_tract_crosswalk.csv')
 
 class Tract(Model):
     fields = [

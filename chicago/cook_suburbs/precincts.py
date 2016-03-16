@@ -3,9 +3,12 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
 from base import Model, Collection, DATA_DIRECTORY
+from csv import DictReader
 
 COOK_SUBURBAN_PRECINCT_CSV_FILENAME = os.path.join(
     DATA_DIRECTORY, 'cook_suburban_precincts_as_of_2016.csv')
+COOK_SUBURBAN_PRECINCT_TRACT_CROSSWALK_CSV_FILENAME = os.path.join(
+    DATA_DIRECTORY, 'suburban_cook_precinct_census_tract_crosswalk.csv')
 
 class CookSuburbanPrecinct(Model):
     fields = [
@@ -55,3 +58,23 @@ class CookSuburbanPrecinctCollection(Collection):
 
 COOK_SUBURBAN_PRECINCTS = CookSuburbanPrecinctCollection().from_csv(
     COOK_SUBURBAN_PRECINCT_CSV_FILENAME)
+
+# HACK - this seems duplicative with Chicago precinct crosswalk
+COOK_SUBURBAN_CROSSWALK = []
+with open(COOK_SUBURBAN_PRECINCT_TRACT_CROSSWALK_CSV_FILENAME) as fh:
+    reader = DictReader(fh)
+    for row in reader:
+        COOK_SUBURBAN_CROSSWALK.append(row)
+
+def get_suburban_cook_precincts_from_tract_geoid(geoid):
+    precinct_ids = []
+    for row in COOK_SUBURBAN_CROSSWALK:
+        if row['tract_geoid'] == str(geoid):
+            precinct_ids.append(row['precinct_number'])
+    return precinct_ids
+
+def get_suburban_cook_tract_from_precinct_number(precinct_id):
+    for row in COOK_SUBURBAN_CROSSWALK:
+        if row['precinct_number'] == str(precinct_id):
+            return row['tract_geoid']
+    return None

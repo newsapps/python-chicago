@@ -2,7 +2,7 @@ import os.path
 
 from .base import Model, Collection, DATA_DIRECTORY
 
-PRECINCT_CSV_FILENAME = os.path.join(DATA_DIRECTORY, 'precinct_census_tract_crosswalk.csv')
+PRECINCT_CSV_FILENAME = os.path.join(DATA_DIRECTORY, 'chicago_precinct_census_tract_crosswalk.csv')
 
 class Precinct(Model):
     fields = [
