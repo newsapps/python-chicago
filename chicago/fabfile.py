@@ -1,8 +1,50 @@
+import fiona
 import json
 import requests
 
 from csv import DictWriter
 from shapely.geometry import shape, Point
+from StringIO import StringIO
+from zipfile import ZipFile
+
+
+def download_all_tracts_for_county(
+        url='http://www2.census.gov/geo/tiger/TIGER2015/TRACT/tl_2015_17_tract.zip',
+        tracts_as_of=2015,
+        county='Cook'):
+    """
+    Download zip containing all census tracts in Illinois, and save GeoJSON of selected county's
+    tracts.
+    """
+    response = requests.get(url)
+    with open('/tmp/il_counties.zip', 'w+') as fh:
+        fh.write(response.content)
+    with fiona.open('/tl_2015_17_tract.shp', vfs='zip:///tmp/il_counties.zip') as shp:
+        for row in shp:
+            print shape(row['geometry']).centroid, row['properties']
+
+
+def download_county_fips_codes(
+        url='http://www2.census.gov/geo/docs/reference/codes/files/st17_il_cou.txt',
+        counties_as_of=2016):
+    """
+    Download Illinois county FIPS codes, to allow us to convert back and forth between names and
+    FIPS codes.
+    """
+    response = requests.get(url)
+    header = ['State', 'StateFP', 'CountyFP', 'County', 'H1']
+    results = []
+    for row in response.content.split('\n'):
+        split = row.strip().split(',')
+        assert len(split) == 5
+        result = {}
+        for idx, val in enumerate(split):
+            result[header[idx]] = val
+        results.append(result)
+    with open('data/county_fips.csv', 'w+') as fh:
+        writer = DictWriter(fh, header)
+        writer.writeheader()
+        writer.writerows(results)
 
 
 def download_precincts(
@@ -19,6 +61,28 @@ def download_precincts(
 
     with open('data/precincts_as_of_%s.geojson' % precincts_as_of, 'w+') as fh:
         fh.write(json.dumps(data))
+
+
+def download_suburban_precincts(
+        url='https://datacatalog.cookcountyil.gov/api/geospatial/mtie-43p4?method=export&format=GeoJSON',
+        precincts_as_of=2016):
+    """
+    Download suburban Cook precinct GeoJSON from url. Set precincts_as_of flag to indicate vintage
+    of precinct data. Save GeoJSON and also save features to a CSV.
+    """
+    response = requests.get(url)
+    assert response.status_code == 200
+
+    data = response.json()
+
+    with open('data/cook_suburban_precincts_as_of_%s.geojson' % precincts_as_of, 'w+') as fh:
+        fh.write(json.dumps(data))
+
+    csv_data = [feature['properties'] for feature in data['features']]
+    with open('data/cook_suburban_precincts_as_of_%s.csv' % precincts_as_of, 'w+') as fh:
+        writer = DictWriter(fh, sorted(csv_data[0].keys()))
+        writer.writeheader()
+        writer.writerows(csv_data)
 
 
 def download_tracts(
