@@ -13,14 +13,15 @@ COOK_SUBURBAN_PRECINCT_TRACT_CROSSWALK_CSV_FILENAME = os.path.join(
 class CookSuburbanPrecinct(Model):
     fields = [
         'town',
-        'precinctid'
+        'precinctid',
+        'objectid'
     ]
 
     def __str__(self):
         return self.precinctid
 
     def __repr__(self):
-        return "CookSuburbanPrecinct(town='{pc.town}', precinctid='{pc.precinctid}')".format(
+        return "CookSuburbanPrecinct(town='{pc.town}', precinctid='{pc.precinctid}', objectid='{pc.objectid}'')".format(
             pc=self)
 
 
@@ -30,11 +31,13 @@ class CookSuburbanPrecinctCollection(Collection):
     def __init__(self):
         self._by_precinct_id = {}
         self._by_town_name = {}
+        self._by_object_id = {}
         super(CookSuburbanPrecinctCollection, self).__init__()
 
     def add_item(self, item):
         super(CookSuburbanPrecinctCollection, self).add_item(item)
         self._by_precinct_id[item.precinctid] = item
+        self._by_object_id[item.objectid] = item
         if item.town.lower() not in self._by_town_name:
             self._by_town_name[item.town.lower()] = []
         self._by_town_name[item.town.lower()].append(item)
@@ -42,7 +45,8 @@ class CookSuburbanPrecinctCollection(Collection):
     def transform_row(self, row):
         return {
             'town': row['name'],
-            'precinctid': str(row['idpct'])
+            'precinctid': str(row['idpct']),
+            'objectid': row['objectid']
         }
 
     def get_by_town_name(self, name):
@@ -50,6 +54,9 @@ class CookSuburbanPrecinctCollection(Collection):
 
     def get_by_precinct_id(self, precinctid):
         return self._by_precinct_id.get(str(precinctid), None)
+
+    def get_by_object_id(self, object_id):
+        return self._by_object_id.get(str(object_id), None)
 
     def default_sort(self):
         self._items = sorted(self._items, key=lambda pc: int(pc.precinctid))
@@ -66,15 +73,15 @@ with open(COOK_SUBURBAN_PRECINCT_TRACT_CROSSWALK_CSV_FILENAME) as fh:
     for row in reader:
         COOK_SUBURBAN_CROSSWALK.append(row)
 
-def get_suburban_cook_precincts_from_tract_geoid(geoid):
+def get_suburban_cook_precincts_from_tract_geoid(geoid, precinct_key='precinct_objectid'):
     precinct_ids = []
     for row in COOK_SUBURBAN_CROSSWALK:
         if row['tract_geoid'] == str(geoid):
-            precinct_ids.append(row['precinct_number'])
+            precinct_ids.append(row.get(precinct_key, None))
     return precinct_ids
 
-def get_suburban_cook_tract_from_precinct_number(precinct_id):
+def get_suburban_cook_tract_from_precinct_number(precinct_id, precinct_key='precinct_objectid'):
     for row in COOK_SUBURBAN_CROSSWALK:
-        if row['precinct_number'] == str(precinct_id):
+        if row.get(precinct_key, None) == str(precinct_id):
             return row['tract_geoid']
     return None

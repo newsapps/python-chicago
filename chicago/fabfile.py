@@ -200,6 +200,7 @@ def generate_suburban_cook_precinct_tract_crosswalk(
         centroid = shape(precinct['geometry']).centroid
         cw = {
             'precinct_number': precinct['properties']['idpct'],
+            'precinct_objectid': precinct['properties']['objectid'],
             'tract_geoid': None
         }
         for tract in tract_geos:
