@@ -52,6 +52,33 @@ Usage
     Avondale
     Belmont Cragin
 
+### Iterate over census tracts
+
+    >>> from chicago import TRACTS
+    >>> for tract in TRACTS:
+    ...     print(tract)
+    17031010100
+    17031010100
+    17031010100
+    17031010100
+    17031010201
+
+### Get the census tract that contains a Chicago precinct
+
+    >>> from chicago import PRECINCTS
+    >>> precinct = PRECINCTS[0]
+    >>> from chicago import get_tract_from_precinct_id
+    >>> tract = get_tract_from_precinct_id(precinct.full_name)
+    >>> print(tract)
+
+### Get the census tract that contains a suburban Cook county precinct
+
+    >>> from chicago.cook_suburbs import COOK_SUBURBAN_PRECINCTS, get_suburban_cook_tract_from_precinct_number
+    >>> precinct = COOK_SUBURBAN_PRECINCTS[0]
+    >>> tract = get_suburban_cook_tract_from_precinct_number(precinct.objectid)
+    >>> print(tract)
+    17031804202
+
 
 Data Sources
 ------------
@@ -63,3 +90,16 @@ Data Sources
 ### Neighborhoods
 
 [Boundaries - Neighborhoods](https://data.cityofchicago.org/Facilities-Geographic-Boundaries/Boundaries-Neighborhoods/bbvz-uum9) from the City of Chicago Data Portal
+
+Building the data
+-----------------
+
+This package uses Fabric to generate the CSV files that underly the Python API.
+
+### Cleaning up build files
+
+    fab clean
+
+### Generating precinct to census tract crosswalk CSVs
+
+    fab build_precinct_to_tract_crosswalks

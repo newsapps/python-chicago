@@ -2,3 +2,5 @@
 *.pyc
 *.swp
 dist
+# Don't track temporary data files
+_data
