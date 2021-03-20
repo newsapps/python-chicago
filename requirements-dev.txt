@@ -2,7 +2,7 @@ ecdsa==0.13.3
 Fabric==1.10.2
 paramiko==1.16.0
 pycrypto==2.6.1
-requests==2.9.1
+requests==2.20.0
 Shapely==1.5.13
 six==1.10.0
 Fiona==1.6.3
